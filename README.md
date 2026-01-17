@@ -1,5 +1,11 @@
 # MimicDodo
 
+<p align="center">
+  <img src="whole_body_tracking/dodo_backflip.gif" alt="Dodo Robot Backflip" width="100%"/>
+  <br>
+  <em>Figure 1: Dodo robot performing a backflip trained via RSL-RL</em>
+</p>
+
 A unified workspace for Dodo robot motion generation and training, combining trajectory optimization with reinforcement learning-based whole-body tracking.
 
 This repository integrates two complementary approaches to robot motion generation:
