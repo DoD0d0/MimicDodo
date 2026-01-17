@@ -41,14 +41,16 @@ MimicDodo/
 │   │   ├── record_jump.py
 │   │   ├── record_kangaroo.py
 │   │   └── record_stand.py
-│   └── se3_trajopt/                 # SE(3) trajectory optimization
-│       └── src/
-│           ├── examples/
-│           │   └── agile_exps/
-│           │       └── dodo_flip.py  # Backflip trajectory optimization
-│           └── robots/
-│               └── dodobot_v3/
-│                   └── DodoWrapper.py
+│   ├── se3_trajopt/                 # SE(3) trajectory optimization
+│   │   └── src/
+│   │       ├── examples/
+│   │       │   └── agile_exps/
+│   │       │       └── dodo_flip.py  # Backflip trajectory optimization
+│   │       └── robots/
+│   │           └── dodobot_v3/
+│   │               └── DodoWrapper.py
+│   └── blender/                     # Blender animation workflow (⚠️ Under Development)
+│       └── Dodo_Walk.blend          # Blender file with skeleton rigging
 │
 └── whole_body_tracking/             # RL-based motion imitation
     ├── scripts/                     # Training & evaluation scripts
@@ -101,7 +103,9 @@ python -m pip install -e source/whole_body_tracking
 
 ## 🎬 Trajectory Creation
 
-The trajectory creation module provides two approaches for generating robot motion:
+The trajectory creation module provides multiple approaches for generating robot motion:
+
+> ⚠️ **Note**: A Blender-based animation workflow is available in `trajectory_creation/blender/` but is **not production-ready** due to known issues with rotation axes, collision geometry, and CSV export. Use Pinocchio scripts or SE3 TrajOpt for reliable trajectory generation.
 
 ### 📐 Pinocchio Recording Scripts
 
@@ -334,6 +338,7 @@ python scripts/rsl_rl/play.py --task=Tracking-Flat-Dodo-v0 --num_envs=1 --load_r
 
 - **Pinocchio Scripts**: See `trajectory_creation/pinocchio/README.md`
 - **SE3 TrajOpt**: See `trajectory_creation/se3_trajopt/README.md`
+- **Blender Animation** (⚠️ Under Development): See `trajectory_creation/blender/README.md`
 - **Whole Body Tracking**: See `whole_body_tracking/README.md`
 
 ---
