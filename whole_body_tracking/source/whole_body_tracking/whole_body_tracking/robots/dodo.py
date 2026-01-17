@@ -75,8 +75,8 @@ DODO_ROBOT_CFG = ArticulationCfg(
             'left_joint_3', 'right_joint_3', 
             'left_joint_4', 'right_joint_4'
             ],
-            effort_limit_sim=12.0,              # was 6 Newton Meters for walking  / 30 for Backflip => robot actually only needs 7Nm
-            velocity_limit_sim=10.0,            # was 15 rad/s for walking         / 30 for Backflip => robot actually only needs 5Nm
+            effort_limit_sim=30.0,              # was 6 Newton Meters for walking  / 30 for Backflip => robot actually only needs 7Nm
+            velocity_limit_sim=30.0,            # was 15 rad/s for walking         / 30 for Backflip => robot actually only needs 5Nm
             stiffness=80.0,                     # KP:  80 for walking                            
             damping=0.2                         # KD:  1 for walking    # TODO test 0.2 for Backflip
         ),

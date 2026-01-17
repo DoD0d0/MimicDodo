@@ -422,7 +422,7 @@ class MotionCommandCfg(CommandTermCfg):
 
     adaptive_kernel_size: int = 1
     adaptive_lambda: float = 0.8
-    adaptive_uniform_ratio: float = 0.05  # Walking: 0.1 // Adds a uniform baseline probability to all trajectory bins // Higher values → more uniform (random) sampling across the trajectory // Lower values → more focused sampling on failure regions
+    adaptive_uniform_ratio: float = 0.01  # Walking: 0.1 // Adds a uniform baseline probability to all trajectory bins // Higher values → more uniform (random) sampling across the trajectory // Lower values → more focused sampling on failure regions
     adaptive_alpha: float = 0.001
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
