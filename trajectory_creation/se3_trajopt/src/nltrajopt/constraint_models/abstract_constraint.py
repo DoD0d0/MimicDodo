@@ -8,6 +8,14 @@ from nltrajopt.node import Node
 from nltrajopt.se3tangent import *
 
 
+def get_frame_id_safe(model: pin.Model, frame_name: str) -> int:
+    """Get frame ID, handling URDFs where joint and link share a name (e.g. foot_sole_left)."""
+    try:
+        return model.getFrameId(frame_name)
+    except ValueError:
+        return model.getFrameId(frame_name, pin.FrameType.BODY)
+
+
 def extend_ids_lists(row_ids, col_ids, slice_rows, slice_cols):
     row_indices = range(*slice_rows.indices(10**6))
     col_indices = range(*slice_cols.indices(10**6))

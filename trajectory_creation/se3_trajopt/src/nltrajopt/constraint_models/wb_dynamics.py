@@ -1,4 +1,10 @@
-from nltrajopt.constraint_models.abstract_constraint import *
+import numpy as np
+import pinocchio as pin
+from typing import List
+
+from nltrajopt.constraint_models.abstract_constraint import AbstractConstraint, extend_ids_lists, get_frame_id_safe
+from nltrajopt.node import Node
+from nltrajopt.se3tangent import q_tan2pin
 
 
 class WholeBodyDynamics(AbstractConstraint):
@@ -15,7 +21,7 @@ class WholeBodyDynamics(AbstractConstraint):
         # Process all contact frames
         for frame in nd.contact_phase_fnames:
             # Get frame information
-            frame_id = model_.getFrameId(frame)
+            frame_id = get_frame_id_safe(model_, frame)
             frame_data = model_.frames[frame_id]
 
             # Get parent joint of this frame
@@ -66,7 +72,7 @@ class WholeBodyDynamics(AbstractConstraint):
         jac[node_curr.c_dh_id, node_curr.aq_id] = data.M
 
         for frame in node_curr.contact_phase_fnames:
-            frame_id = model.getFrameId(frame)
+            frame_id = get_frame_id_safe(model, frame)
             J_f = pin.computeFrameJacobian(model, data, q, frame_id, pin.ReferenceFrame.LOCAL)
             jac[node_curr.c_dh_id, node_curr.forces_ids[frame]] = -J_f.T[:, :3]
 

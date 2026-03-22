@@ -1,4 +1,13 @@
-from nltrajopt.constraint_models.abstract_constraint import *
+import numpy as np
+import pinocchio as pin
+
+from nltrajopt.constraint_models.abstract_constraint import (
+    AbstractConstraint,
+    extend_ids_lists,
+    get_frame_id_safe,
+)
+from nltrajopt.node import Node
+from nltrajopt.se3tangent import hat, q_tan2pin
 
 
 class FrictionConstraints(AbstractConstraint):
@@ -26,7 +35,7 @@ class FrictionConstraints(AbstractConstraint):
 
         max_force = 1.0 * pin.computeTotalMass(model) * np.linalg.norm(model.gravity.vector) if self.max_force <= 0.0 else self.max_force
         for frame in node_curr.contact_phase_fnames:
-            frame_id = model.getFrameId(frame)
+            frame_id = get_frame_id_safe(model, frame)
             F_world = (data.oMf[frame_id].rotation @ state_vars[node_curr.forces_ids[frame]]).reshape((3, 1))
             n = np.array([[0.0, 0.0, 1.0]]).T
             t1 = np.array([[1.0, 0.0, 0.0]]).T
@@ -49,7 +58,7 @@ class FrictionConstraints(AbstractConstraint):
         pin.updateFramePlacements(model, data)
 
         for frame in node_curr.contact_phase_fnames:
-            frame_id = model.getFrameId(frame)
+            frame_id = get_frame_id_safe(model, frame)
             R = data.oMf[frame_id].rotation
 
             Jf = pin.computeFrameJacobian(model, data, q, frame_id, pin.ReferenceFrame.LOCAL)
@@ -125,7 +134,7 @@ class ContactConstraint(AbstractConstraint):
         pin.updateFramePlacements(model, data)
 
         frame = self.contact_fname
-        frame_id = model.getFrameId(frame)
+        frame_id = get_frame_id_safe(model, frame)
 
         # Position constraint: p_contact - p_frame = 0
         c[node_curr.c_contact_kinematics_ids[frame]] = data.oMf[frame_id].translation - state_vars[node_curr.contact_pos_ids[frame]]
@@ -143,7 +152,7 @@ class ContactConstraint(AbstractConstraint):
         pin.updateFramePlacements(model, data)
 
         frame = self.contact_fname
-        frame_id = model.getFrameId(frame)
+        frame_id = get_frame_id_safe(model, frame)
 
         J = pin.computeFrameJacobian(model, data, q, frame_id, pin.LOCAL_WORLD_ALIGNED)
         J[:, :6] = J[:, :6] @ pin.Jexp6(w[node_curr.q_id][:6])  # Convert to tangent space

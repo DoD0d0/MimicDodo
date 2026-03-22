@@ -1,8 +1,8 @@
 import numpy as np
-
 import pinocchio as pin
-
 from pinocchio.visualize import MeshcatVisualizer
+
+from nltrajopt.constraint_models.abstract_constraint import get_frame_id_safe
 import meshcat.geometry as g
 import meshcat.transformations as tf
 
@@ -46,7 +46,7 @@ class TrajoptVisualiser:
             # Convert force vector to float (to avoid dtype issues)
             force_arrow = scale * f_F
 
-            fid = robot_wrapper.model.getFrameId(fid)
+            fid = get_frame_id_safe(robot_wrapper.model, fid)
 
             # Get world position of the frame
             oMF = robot_wrapper.data.oMf[fid]

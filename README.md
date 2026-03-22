@@ -8,85 +8,78 @@
 
 A unified workspace for Dodo robot motion generation and training, combining trajectory optimization with reinforcement learning-based whole-body tracking.
 
-This repository integrates two complementary approaches to robot motion generation:
-- **Trajectory Creation**: Motion planning using Pinocchio and SE(3) trajectory optimization
-- **Whole Body Tracking**: Deep learning-based motion imitation using Isaac Lab and RSL-RL
-
 🧩 **Prerequisites**
 
-- Ubuntu 22.04 (Linux x64) or Windows 11 (x64)
+- Ubuntu 22.04 (Linux x64)
 - RAM: 32GB
 - GPU VRAM: 16GB (recommended for training)
-- Python: 3.10 or 3.11 (depending on Isaac Sim version)
 - NVIDIA GPU with compatible driver
 - Conda (recommended)
 - Isaac Sim 4.5.0 or later (for whole_body_tracking)
 
+---
+
 ## 📁 Project Structure
-
-The MimicDodo repository is organized into three main components:
-
 ```
 MimicDodo/
 ├── assets/
-│   └── dodo/                          # Centralized robot assets
-│       ├── urdf/
-│       │   └── dodo.urdf             # Robot URDF (shared by all projects)
-│       ├── meshes/                   # Robot mesh files
-│       └── config/                   # Robot configuration
+│   ├── dodo/                          # Original Dodo robot
+│   │   ├── urdf/dodo.urdf
+│   │   ├── meshes/
+│   │   └── config/
+│   └── dodo_daimao/                   # DodoDaimao robot
+│       ├── urdf/dodo_daimao.urdf      # Fixed: hip_left mass, primitive collisions
+│       └── meshes/
 │
-├── trajectory_creation/              # Motion planning & trajectory generation
-│   ├── pinocchio/                   # Pinocchio-based recording scripts
-│   │   ├── record_walk.py
-│   │   ├── record_jump.py
-│   │   ├── record_kangaroo.py
-│   │   └── record_stand.py
-│   ├── se3_trajopt/                 # SE(3) trajectory optimization
-│   │   └── src/
-│   │       ├── examples/
-│   │       │   └── agile_exps/
-│   │       │       └── dodo_flip.py  # Backflip trajectory optimization
-│   │       └── robots/
-│   │           └── dodobot_v3/
-│   │               └── DodoWrapper.py
-│   └── blender/                     # Blender animation workflow (⚠️ Under Development)
-│       └── Dodo_Walk.blend          # Blender file with skeleton rigging
+├── trajectory_creation/
+│   ├── pinocchio/                     # Simple FK/IK recording scripts
+│   └── se3_trajopt/src/
+│       ├── examples/agile_exps/
+│       │   ├── dodo_backflip.py
+│       │   ├── dodo_daimao_backflip.py
+│       │   └── dodo_daimao_walk.py
+│       └── robots/
+│           ├── dodobot_v3/DodoWrapper.py
+│           └── dodo_daimao/DodoDaimaoWrapper.py
 │
-└── whole_body_tracking/             # RL-based motion imitation
-    ├── scripts/                     # Training & evaluation scripts
-    │   ├── csv_to_npz_dodo.py      # Convert CSV to NPZ format
-    │   ├── replay_npz_dodo.py      # Replay motion data
+└── whole_body_tracking/
+    ├── dodo_daimao_backflip.npz       # Generated — do not commit
+    ├── scripts/
+    │   ├── csv_to_npz_dodo.py         # Dodo converter (requires Isaac Sim)
+    │   ├── csv_to_npz_dodo_daimao.py  # DodoDaimao converter (Pinocchio, fast)
+    │   ├── replay_npz_dodo.py
     │   └── rsl_rl/
-    │       ├── train.py             # Training entry point
-    │       └── play.py              # Policy evaluation/visualization
-    └── source/
-        └── whole_body_tracking/    # Isaac Lab extension source
+    │       ├── train.py
+    │       └── play.py
+    └── source/whole_body_tracking/whole_body_tracking/
+        ├── robots/
+        │   ├── dodo.py
+        │   └── dodo_daimao.py
+        └── tasks/tracking/
+            ├── dodo/
+            │   ├── __init__.py
+            │   ├── flat_env_cfg.py
+            │   └── agents/rsl_rl_ppo_cfg.py
+            └── dodo_daimao/
+                ├── __init__.py
+                ├── flat_env_cfg.py
+                └── agents/
+                    ├── __init__.py
+                    └── rsl_rl_ppo_cfg.py
 ```
-
-### 🔄 Asset Centralization
-
-All robot assets (URDF, meshes, configuration) are centralized in `assets/dodo/` and shared across both trajectory creation and training projects. This ensures consistency and simplifies asset management.
 
 ---
 
 ## 🚀 Installation
 
-### Environment Setup
-
-1. **Clone the repository:**
-```bash
-git clone <repository-url>
-cd MimicDodo
-```
-
-2. **Set up environment for trajectory creation (Pinocchio/SE3 TrajOpt):**
+### Trajectory Creation (Pinocchio / SE3 TrajOpt)
 ```bash
 conda create -n trajopt python=3.13
 conda activate trajopt
 conda install -c conda-forge pinocchio meshcat-python cyipopt matplotlib numpy
 ```
 
-3. **Set up environment for whole body tracking (Isaac Lab):**
+### Whole Body Tracking (Isaac Lab)
 ```bash
 cd whole_body_tracking
 conda create -n beyondmimic python=3.10
@@ -101,281 +94,243 @@ python -m pip install -e source/whole_body_tracking
 
 ---
 
-## 🎬 Trajectory Creation
+## 🎬 DodoDaimao Backflip — Full Workflow
 
-The trajectory creation module provides multiple approaches for generating robot motion:
+All commands run from the **MimicDodo project root** unless noted.
 
-> ⚠️ **Note**: A Blender-based animation workflow is available in `trajectory_creation/blender/` but is **not production-ready** due to known issues with rotation axes, collision geometry, and CSV export. Use Pinocchio scripts or SE3 TrajOpt for reliable trajectory generation.
-
-### 📐 Pinocchio Recording Scripts
-
-Simple motion recording using forward/inverse kinematics. Ideal for generating basic locomotion patterns.
-
-**Setup:**
+### Step 1 — Generate backflip trajectory
 ```bash
 conda activate trajopt
-export PYTHONPATH="/home/simonkruelle/DataDome/Simons_Dokumente/Studium/Robotics, Cognition, Intelligence/DODO Alive/se3_trajopt/src"
+export PYTHONPATH="$(pwd)/trajectory_creation/se3_trajopt/src"
+
+# With visualizer (meshcat — open http://127.0.0.1:7000/static/ in browser)
+python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_daimao_backflip.py --vis
+
+# Headless export only
+python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_daimao_backflip.py
+
+# Output: whole_body_tracking/scripts/dodo_daimao_backflip.csv
 ```
 
-**Available Scripts:**
-- `record_walk.py` - Walking trajectory
-- `record_jump.py` - Jumping motion
-- `record_kangaroo.py` - Hopping motion
-- `record_stand.py` - Static standing pose
-
-**Run from project root:**
+### Step 2 — Convert CSV → NPZ (fast, no Isaac Sim needed)
 ```bash
-python trajectory_creation/pinocchio/record_walk.py
-python trajectory_creation/pinocchio/record_jump.py
-python trajectory_creation/pinocchio/record_kangaroo.py
-python trajectory_creation/pinocchio/record_stand.py
+# Still in trajopt env — finishes in <5 seconds
+python whole_body_tracking/scripts/csv_to_npz_dodo_daimao.py \
+  --input_file  whole_body_tracking/scripts/dodo_daimao_backflip.csv \
+  --input_fps   100 \
+  --output_name dodo_daimao_backflip \
+  --output_fps  100
+
+# Output: whole_body_tracking/dodo_daimao_backflip.npz
 ```
 
-**Output:** CSV files saved to `whole_body_tracking/scripts/`
-
-### 🎯 SE(3) Trajectory Optimization
-
-Advanced trajectory optimization in SE(3) tangent space. Generates dynamic motions like backflips using nonlinear optimization.
-
-**Setup:**
-```bash
-conda activate trajopt
-export PYTHONPATH="/home/simonkruelle/DataDome/Simons_Dokumente/Studium/Robotics, Cognition, Intelligence/DODO Alive/se3_trajopt/src"
-```
-
-**Run backflip optimization:**
-```bash
-python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_flip.py --vis
-```
-
-**Output:** CSV file saved to `scripts/dodo_backflip.csv` (project root)
-
-**Key Features:**
-- Whole-body dynamics in SE(3) tangent space
-- Contact constraints and terrain modeling
-- Uses IPOPT for optimization
-- Supports visualization with meshcat (`--vis` flag)
-
----
-
-## 🧠 Whole Body Tracking (RL Training)
-
-Reinforcement learning-based motion imitation using Isaac Lab and RSL-RL (PPO). Trains policies to reproduce reference motions with robustness and generalization.
-
-### ⚙️ Environment Setup
-
-All training commands must be executed from the `whole_body_tracking/` directory with the `beyondmimic` conda environment activated:
-
+### Step 3 — Upload NPZ to wandb
 ```bash
 cd whole_body_tracking
 conda activate beyondmimic
+
+python -c "
+import wandb
+name = 'dodo_daimao_backflip'
+run  = wandb.init(project='csv_to_npz', name=name)
+art  = run.log_artifact('dodo_daimao_backflip.npz', name=name, type='motions')
+run.link_artifact(art, target_path=f'wandb-registry-motions/{name}')
+print('Uploaded: motions/' + name)
+run.finish()
+"
 ```
 
-### 📊 Motion Preprocessing
-
-Convert CSV trajectory files to NPZ format for training:
-
+### Step 4 — Replay to verify (recommended before training)
 ```bash
+# From whole_body_tracking/
+python scripts/replay_npz_dodo.py \
+  --registry_name simon-kruelle-technical-university-of-munich/csv_to_npz/dodo_daimao_backflip
+```
+
+Check that the motion looks correct in Isaac Sim before spending GPU time training.
+
+### Step 5 — Train
+```bash
+# From whole_body_tracking/
+WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py \
+  --task=Tracking-Flat-DodoDaimao-v0 \
+  --motion_file dodo_daimao_backflip.npz \
+  --wandb_project whole_body_tracking \
+  --headless
+```
+
+To resume from a checkpoint:
+```bash
+WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py \
+  --task=Tracking-Flat-DodoDaimao-v0 \
+  --motion_file dodo_daimao_backflip.npz \
+  --wandb_project whole_body_tracking \
+  --resume=True \
+  --load_run=<your-run-id> \
+  --checkpoint=model_XXXXX.pt \
+  --headless
+```
+
+### Step 6 — Evaluate trained policy
+```bash
+# From whole_body_tracking/
+python scripts/rsl_rl/play.py \
+  --task=Tracking-Flat-DodoDaimao-v0 \
+  --num_envs=1 \
+  --load_run "<your-run-id>" \
+  --checkpoint "model_XXXXX.pt" \
+  --motion_file dodo_daimao_backflip.npz \
+  --video \
+  --video_length 1000 \
+  --disable_fabric
+```
+
+---
+
+## 🎬 Original Dodo Backflip — Full Workflow
+
+### Step 1 — Generate trajectory
+```bash
+conda activate trajopt
+export PYTHONPATH="$(pwd)/trajectory_creation/se3_trajopt/src"
+python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_backflip.py --vis
+```
+
+### Step 2 — Convert CSV → NPZ (requires Isaac Sim)
+```bash
+cd whole_body_tracking
+conda activate beyondmimic
 python scripts/csv_to_npz_dodo.py \
-  --input_file scripts/dodo_walk.csv \
+  --input_file scripts/dodo_backflip.csv \
   --input_fps 100 \
-  --output_name dodo_walk \
+  --output_name dodo_backflip \
   --output_fps 100
 ```
 
-**Parameters:**
-- `--input_file`: Path to CSV trajectory file
-- `--input_fps`: FPS of input CSV (100 Hz for Pinocchio scripts)
-- `--output_name`: Name for output NPZ file
-- `--output_fps`: Target FPS for training (typically 100 Hz)
-
-**Output:** `dodo_walk.npz` saved in `whole_body_tracking/` directory
-
-### 🎬 Motion Replay (Debugging)
-
-Test motion data before training:
-
-```bash
-python scripts/replay_npz_dodo.py \
-  --registry_name simon-kruelle-technical-university-of-munich/csv_to_npz/dodo_walk
-```
-
-This visualizes the reference motion in Isaac Sim to verify it loads correctly.
-
-### 🏋️ Policy Training
-
-Train a policy to imitate the reference motion:
-
+### Step 3 — Train
 ```bash
 WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py \
   --task=Tracking-Flat-Dodo-v0 \
-  --resume=True \
-  --load_run=2026-01-17_12-19-27 \
-  --checkpoint=model_12499.pt \
   --motion_file dodo_backflip.npz \
   --wandb_project whole_body_tracking \
   --headless
 ```
 
-**Key Arguments:**
-- `--task`: Environment variant (`Tracking-Flat-Dodo-v0` for flat terrain)
-- `--motion_file`: NPZ file containing reference motion (e.g., `dodo_backflip.npz`)
-- `--wandb_project`: Weights & Biases project name
-- `--headless`: Run without GUI (recommended for training)
-- `--resume`: Resume training from checkpoint
-- `--load_run`: Run ID to resume from
-- `--checkpoint`: Checkpoint file to load
-
-**Training Output:**
-- Logs: `whole_body_tracking/logs/rsl_rl/dodo_flat/<run_id>/`
-- Checkpoints: Saved as `model_*.pt` files
-- Metrics: Logged to WandB (if configured)
-
-### 🎮 Policy Evaluation
-
-Play a trained policy to visualize results:
-
+### Step 4 — Evaluate
 ```bash
 python scripts/rsl_rl/play.py \
   --task=Tracking-Flat-Dodo-v0 \
   --num_envs=1 \
-  --load_run "2026-01-17_12-19-27" \
-  --checkpoint "model_12499.pt" \
+  --load_run "<your-run-id>" \
+  --checkpoint "model_XXXXX.pt" \
   --motion_file dodo_backflip.npz \
   --video \
   --video_length 1000 \
   --disable_fabric
 ```
 
-**Key Arguments:**
-- `--task`: Environment variant (must match training task)
-- `--num_envs`: Number of parallel environments (1 for visualization)
-- `--load_run`: Run ID containing trained model
-- `--checkpoint`: Checkpoint file to load
-- `--motion_file`: Reference motion file
-- `--video`: Enable video recording
-- `--video_length`: Number of frames to record
-- `--disable_fabric`: Disable Fabric rendering (for compatibility)
-
 ---
 
-## 🤖 Robot Configuration (Dodo)
-
-The Dodo robot is a bipedal robot with 8 actuated joints:
-
-**Joints:**
-- `left_joint_1` through `left_joint_4` (left leg)
-- `right_joint_1` through `right_joint_4` (right leg)
-
-**Asset Location:**
-- **URDF**: `assets/dodo/urdf/dodo.urdf` (centralized, used by all projects)
-- **Meshes**: `assets/dodo/meshes/`
-- **Configuration**: `assets/dodo/config/`
-
-All projects (Pinocchio, SE3 TrajOpt, and Isaac Lab) reference this centralized asset location automatically.
-
----
-
-## 📋 Quick Reference: Command Cheat Sheet
-
-### Trajectory Creation
-
+## 🎬 Pinocchio Recording Scripts (Simple Motions)
 ```bash
-# Activate environment
 conda activate trajopt
-export PYTHONPATH="/home/simonkruelle/DataDome/Simons_Dokumente/Studium/Robotics, Cognition, Intelligence/DODO Alive/se3_trajopt/src"
+export PYTHONPATH="$(pwd)/trajectory_creation/se3_trajopt/src"
 
-# Run Pinocchio scripts (from project root)
 python trajectory_creation/pinocchio/record_walk.py
-
-# Run SE3 trajectory optimization
-python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_flip.py --vis
+python trajectory_creation/pinocchio/record_jump.py
+python trajectory_creation/pinocchio/record_kangaroo.py
+python trajectory_creation/pinocchio/record_stand.py
 ```
 
-### Whole Body Tracking
+Output: CSV files saved to `whole_body_tracking/scripts/`
 
+---
+
+## 🤖 Robot Configurations
+
+### Dodo (original)
+- **URDF**: `assets/dodo/urdf/dodo.urdf`
+- **Joints**: `left_joint_1–4`, `right_joint_1–4`
+- **Isaac Lab task**: `Tracking-Flat-Dodo-v0`
+- **CSV converter**: `scripts/csv_to_npz_dodo.py` (requires Isaac Sim)
+
+### DodoDaimao
+- **URDF**: `assets/dodo_daimao/urdf/dodo_daimao.urdf`
+- **Joints**: `hip_left/right`, `upper_leg_left/right`, `lower_leg_left/right`, `foot_left/right`
+- **Isaac Lab task**: `Tracking-Flat-DodoDaimao-v0`
+- **CSV converter**: `scripts/csv_to_npz_dodo_daimao.py` (Pinocchio-based, fast)
+- **Key fixes applied**:
+  - `hip_left` mass corrected 0 → 0.4286 kg (was causing asymmetric dynamics)
+  - All collision geometries replaced with primitives (box for body and feet, none for legs/hips) — matches dodo.urdf pattern and is required for Isaac Sim performance
+  - Two contact points per foot (toe + heel) added in wrapper — required for yaw stability
+  - Standing height corrected to `q[2] = 0.435902` (feet exactly at z=0)
+
+---
+
+## 📋 Quick Reference Cheat Sheet
+
+### DodoDaimao
 ```bash
-# Navigate to whole_body_tracking and activate environment
-cd whole_body_tracking
-conda activate beyondmimic
+# From MimicDodo root
+conda activate trajopt
+export PYTHONPATH="$(pwd)/trajectory_creation/se3_trajopt/src"
+python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_daimao_backflip.py
+python whole_body_tracking/scripts/csv_to_npz_dodo_daimao.py --input_file whole_body_tracking/scripts/dodo_daimao_backflip.csv --input_fps 100 --output_name dodo_daimao_backflip --output_fps 100
 
-# Convert CSV to NPZ
-python scripts/csv_to_npz_dodo.py --input_file scripts/dodo_walk.csv --input_fps 100 --output_name dodo_walk --output_fps 100
-
-# Replay motion
-python scripts/replay_npz_dodo.py --registry_name simon-kruelle-technical-university-of-munich/csv_to_npz/dodo_walk
-
-# Train policy
-WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py --task=Tracking-Flat-Dodo-v0 --resume=True --load_run=2026-01-17_12-19-27 --checkpoint=model_12499.pt --motion_file dodo_backflip.npz --wandb_project whole_body_tracking --headless
-
-# Play trained policy
-python scripts/rsl_rl/play.py --task=Tracking-Flat-Dodo-v0 --num_envs=1 --load_run "2026-01-17_12-19-27" --checkpoint "model_12499.pt" --motion_file dodo_backflip.npz --video --video_length 1000 --disable_fabric
+cd whole_body_tracking && conda activate beyondmimic
+python -c "import wandb; run=wandb.init(project='csv_to_npz',name='dodo_daimao_backflip'); art=run.log_artifact('dodo_daimao_backflip.npz',name='dodo_daimao_backflip',type='motions'); run.link_artifact(art,target_path='wandb-registry-motions/dodo_daimao_backflip'); run.finish()"
+python scripts/replay_npz_dodo.py --registry_name simon-kruelle-technical-university-of-munich/csv_to_npz/dodo_daimao_backflip
+WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py --task=Tracking-Flat-DodoDaimao-v0 --motion_file dodo_daimao_backflip.npz --wandb_project whole_body_tracking --headless
 ```
 
----
+### Dodo
+```bash
+conda activate trajopt && export PYTHONPATH="$(pwd)/trajectory_creation/se3_trajopt/src"
+python trajectory_creation/se3_trajopt/src/examples/agile_exps/dodo_backflip.py
 
-## 🔄 Workflow: From Motion Planning to Policy Deployment
-
-1. **Generate Reference Motion** (Trajectory Creation)
-   - Option A: Use Pinocchio scripts for simple motions (walk, jump, stand)
-   - Option B: Use SE3 TrajOpt for complex motions (backflip, handstand)
-
-2. **Preprocess Motion Data** (Whole Body Tracking)
-   - Convert CSV → NPZ format
-   - Verify with replay script
-
-3. **Train Policy** (Whole Body Tracking)
-   - Train RL policy to imitate reference motion
-   - Monitor training via WandB
-
-4. **Evaluate & Deploy** (Whole Body Tracking)
-   - Visualize trained policy with play script
-   - Export policy for deployment
-
----
-
-## 📚 Additional Documentation
-
-- **Pinocchio Scripts**: See `trajectory_creation/pinocchio/README.md`
-- **SE3 TrajOpt**: See `trajectory_creation/se3_trajopt/README.md`
-- **Blender Animation** (⚠️ Under Development): See `trajectory_creation/blender/README.md`
-- **Whole Body Tracking**: See `whole_body_tracking/README.md`
+cd whole_body_tracking && conda activate beyondmimic
+python scripts/csv_to_npz_dodo.py --input_file scripts/dodo_backflip.csv --input_fps 100 --output_name dodo_backflip --output_fps 100
+WANDB_DIR=/tmp/wandb_cache python scripts/rsl_rl/train.py --task=Tracking-Flat-Dodo-v0 --motion_file dodo_backflip.npz --wandb_project whole_body_tracking --headless
+```
 
 ---
 
 ## 🛠️ Troubleshooting
 
-### Path Issues
+### Isaac Sim loads very slowly / freezes on URDF import
+All `<collision>` bodies in the URDF must use primitive shapes (`<box>`, `<cylinder>`, `<sphere>`), not `<mesh>`. Full mesh collision causes Isaac Sim's convex decomposition to run on every triangle. After editing the URDF, clear the USD cache so Isaac Sim regenerates it:
+```bash
+find ~/.local/share/ov -name "*dodo_daimao*" -delete 2>/dev/null
+find /tmp -name "*dodo_daimao*" -delete 2>/dev/null
+```
+Also ensure `force_usd_conversion=True` in `dodo_daimao.py`.
 
-If you encounter path errors, ensure:
-- URDF path is correctly calculated (all scripts use relative paths from script location)
-- Mesh directory points to `assets/` (parent of `dodo/` package) for Pinocchio scripts
-- Working directory is correct when running scripts
+### csv_to_npz is slow (2–3 min)
+Use `csv_to_npz_dodo_daimao.py` instead of `csv_to_npz_dodo.py`. The dodo_daimao version uses Pinocchio FK and runs in the `trajopt` conda env in under 5 seconds — no Isaac Sim boot required.
 
-### Environment Issues
+### Yaw rotation / spinning during walking or backflip
+The `DodoDaimaoWrapper` must register **two** contact frames per foot (toe + heel). A single point contact has no yaw resistance and the solver freely spins the body. Check `DodoDaimaoWrapper.__init__` for the `_add_foot_frame` calls.
 
-- **Trajectory Creation**: Ensure `PYTHONPATH` is set correctly
-- **Whole Body Tracking**: Ensure you're in `whole_body_tracking/` directory with `beyondmimic` conda environment active
+### Wrong foot height / feet below ground at start
+`go_neutral()` uses hardcoded `q[2] = 0.435902`. If you change the neutral joint angles, recompute with:
+```python
+robot = DodoDaimao()
+q = robot.go_neutral()
+robot.fk_all(q)
+fid = robot.model.getFrameId("left_toe")
+foot_z = robot.data.oMf[fid].translation[2]
+print(foot_z)  # should be ~0.0
+# If not: set q[2] = 0.435902 - foot_z and hardcode the result
+```
 
-### Asset Loading
+### `k1 == k2` assertion error in backflip script
+The flight phase must produce at least 1 timestep: `flight_duration / DT >= 1`. Current setting: `0.45s / 0.05s = 9 steps`. If you change `DT`, scale the flight duration accordingly.
 
-All projects now use the centralized `assets/dodo/urdf/dodo.urdf`. If you see errors about missing URDF files, verify:
-1. The URDF exists at `assets/dodo/urdf/dodo.urdf`
-2. Mesh files exist at `assets/dodo/meshes/`
-3. The path calculation in scripts resolves correctly
-
----
-
-## 📝 Notes
-
-- Training is typically executed in headless mode on a workstation or server
-- Motion data (CSV/NPZ files) should be placed in `whole_body_tracking/scripts/` or project root `scripts/`
-- All robot assets are centralized in `assets/dodo/` for consistency
-- The workflow supports both simple motions (Pinocchio) and complex dynamic motions (SE3 TrajOpt)
+### `hip_left` zero mass (asymmetric dynamics)
+Already fixed in the current `dodo_daimao.urdf`. If you regenerate the URDF from SolidWorks, check that `hip_left` has `<mass value="0.428645410212592"/>` — the exporter originally set it to 0.
 
 ---
 
 ## 📄 License
 
 See individual project directories for license information.
-
