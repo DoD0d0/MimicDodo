@@ -63,9 +63,27 @@ w_hip_only = np.zeros((robot.model.nq - 7, robot.model.nq - 7))
 w_hip_only[0, 0] = 1000.0   # hip_left
 w_hip_only[4, 4] = 1000.0   # hip_right
 
+# FIX: leg joints get stronger ground-phase pull to prevent deep squat
+# Order: hip_left, upper_leg_left, lower_leg_left, foot_left,
+#        hip_right, upper_leg_right, lower_leg_right, foot_right
+w_legs_ground = np.diag(np.array([
+    1000.0,  # hip_left
+    8.0,     # upper_leg_left
+    8.0,     # lower_leg_left
+    5.0,     # foot_left
+    1000.0,  # hip_right
+    8.0,     # upper_leg_right
+    8.0,     # lower_leg_right
+    5.0,     # foot_right
+]))
+
 # 5. BUILD STAGES
 stages = []
 for k, contact_phase_fnames in enumerate(frame_contact_seq):
+
+    in_flight = k1 <= k < k2
+    on_ground = not in_flight
+
     stage_node = Node(
         nv=robot.model.nv,
         contact_phase_fnames=contact_phase_fnames,
@@ -83,12 +101,18 @@ for k, contact_phase_fnames in enumerate(frame_contact_seq):
         TerrainGridFrictionConstraints(terrain, max_delta_force=20),
     ])
 
-    stage_node.costs_list.append(
-        ConfigurationCost(q.copy()[7:], np.eye(robot.model.nq - 7) * 1e-3)
-    )
-    stage_node.costs_list.append(
-        ConfigurationCost(q.copy()[7:], w_hip_only * 1e-2)
-    )
+    if on_ground:
+        # Strong per-joint pull toward neutral — prevents deep squat
+        stage_node.costs_list.append(
+            ConfigurationCost(q.copy()[7:], w_legs_ground * 1e-2)
+        )
+    else:
+        # During flight: very light pull so rotation isn't fought
+        stage_node.costs_list.append(
+            ConfigurationCost(q.copy()[7:], np.eye(robot.model.nq - 7) * 1e-6)
+        )
+
+    # General smoothness
     stage_node.costs_list.append(
         JointAccelerationCost(
             np.zeros((robot.model.nv - 6,)),
