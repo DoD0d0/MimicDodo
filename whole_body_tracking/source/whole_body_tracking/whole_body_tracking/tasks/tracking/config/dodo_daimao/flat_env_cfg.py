@@ -72,21 +72,21 @@ class DodoDaimaoFlatEnvCfg(TrackingEnvCfg):
                         ac = cfg.params["asset_cfg"]
                         if hasattr(ac, "body_names"):
                             if isinstance(ac.body_names, str) and "torso" in ac.body_names:
-                                ac.body_names = "body"
+                                ac.body_names = "base_link"
                             elif isinstance(ac.body_names, list) and "torso_link" in ac.body_names:
-                                ac.body_names = ["body"]
+                                ac.body_names = ["base_link"]
 
         # ---------------------------------------------------------------------
         # 5. ACTIONS & MOTION TRACKING
         # ---------------------------------------------------------------------
         self.actions.joint_pos.scale = DODO_DAIMAO_ACTION_SCALE
-        self.commands.motion.anchor_body_name = "body"
+        self.commands.motion.anchor_body_name = "base_link"
 
         # Body names must match link names as Isaac Lab sees them in the URDF.
         # dodo_daimao links: base_link -> body -> hip_* -> upper_leg_* ->
         #                    lower_leg_* -> foot_* -> foot_sole_*
         self.commands.motion.body_names = [
-            "body",
+            "base_link",
             "hip_left",       "upper_leg_left",  "lower_leg_left",  "foot_left",
             "hip_right",      "upper_leg_right", "lower_leg_right", "foot_right",
         ]
