@@ -39,20 +39,17 @@ DODO_DAIMAO_SPAWN_CFG = sim_utils.UrdfFileCfg(
 DODO_DAIMAO_ROBOT_CFG = ArticulationCfg(
     spawn=DODO_DAIMAO_SPAWN_CFG,
     init_state=ArticulationCfg.InitialStateCfg(
-        # Corrected standing height: feet exactly at z=0 in trajopt
-        # Isaac Sim spawns slightly higher to avoid ground penetration
-        pos=(0.0, 0.0, 0.55),
+        pos=(0.0, 0.0, 0.435902),  # matches go_neutral() q[2] exactly
         rot=(1.0, 0.0, 0.0, 0.0),
         joint_pos={
-            # Joint order matches CSV_EXPORT_ORDER from backflip script
-            "hip_left":       0.0,
-            "upper_leg_left": 0.4,
+            "hip_left":        0.0,
+            "upper_leg_left":  0.4,
             "lower_leg_left": -0.7,
-            "foot_left":      0.3,
-            "hip_right":      0.0,
+            "foot_left":       0.3,
+            "hip_right":       0.0,
             "upper_leg_right": 0.4,
-            "lower_leg_right": -0.7,
-            "foot_right":     0.3,
+            "lower_leg_right":-0.7,
+            "foot_right":      0.3,
         },
         joint_vel={".*": 0.0},
     ),
